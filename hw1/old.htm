@@ -1,0 +1,317 @@
+<!doctype html>
+<html>
+
+  <head>
+  <title>INFO 4310 - Homework 1</title>
+  <meta charset="utf-8">
+  <script src="https://d3js.org/d3.v5.min.js"></script>
+  <script src="https://d3js.org/topojson.v2.min.js"></script>
+
+  <style>
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      background-color: #fff;
+      font-family: 'Roboto', sans-serif;
+    }
+
+    .inner {
+      width: 100%;
+      max-width: 70.5rem;
+      margin: 0 auto;
+      height: inherit;
+    }
+
+    .hi {
+      font-weight: bold;
+      font-size: 4.5rem;
+      line-height: 4.4375rem;
+      padding-top: 1rem;
+    }
+
+    .subtitle {
+      font-weight: 500;
+      font-size: 3rem;
+      padding-top: 1.5rem;
+      padding-bottom: 2rem;
+    }
+
+    .work {
+      font-weight: 500;
+      font-size: 1.4375rem;
+      padding-top: 3rem;
+    }
+
+    .inner_work {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: darkgray;
+    }
+
+
+    .wrapper {
+      width: 100%;
+      max-width: 70.5rem;
+      margin: 0 auto;
+      background-color: #fff;
+      min-height: 10rem;
+      box-sizing: border-box;
+    }
+
+    .neighborhood {
+      fill: black;
+      stroke: lightgray;
+      stroke-width: 2px;
+    }
+
+    #map #map2 {
+      background-color: darkgray;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .project_inner {
+      display: flex;
+      width: 100%;
+      max-width: 70.5rem;
+      height: auto;
+      justify-content: space-around;
+      align-items: center;
+      padding-top: 3rem;
+      padding-bottom:3rem;
+      background-color:darkgray;
+    }
+
+    .bottom_bar{
+      margin-top: 3rem;
+      padding-top: 3rem;
+    }
+
+    .inner_bottom {
+      width: 100%;
+      max-width: 70.5rem;
+      margin: 0 auto;
+      min-height: 10rem;
+    }
+
+    .image {
+      width: 50%;
+      max-width: 35.25rem;
+    }
+
+    .left {
+      padding-right: 1.5rem;
+    }
+
+    .right {
+      padding-left: 1.5rem;
+    }
+
+  </style>
+
+  </head>
+
+  <body>
+    <div class="wrapper">
+        <div class="welcome">
+          <div class="inner">
+
+            <div class="hi">
+              Trees in San Francisco
+            </div>
+
+            <div class="subtitle">
+              Examining location, density, diameter, and species.
+            </div>
+
+          </div>
+        </div>
+
+
+
+        <div class="project" id="div1">
+          <div class="project_inner">
+            <div class="updown">
+            <svg id="map" height="800" width="800"></svg>
+
+            <svg id="map2" height="800" width="800"></svg>
+
+      <script>
+
+        const svg = d3.select("#map");
+        const width = svg.attr("width");
+        const height = svg.attr("height");
+        const margin = { top: 10, right: 10, bottom: 10, left: 10};
+        const sfMapWidth = width - margin.left - margin.right;
+        const sfMapHeight = height - margin.top - margin.bottom;
+        const sfMap = svg.append("g")
+                       .attr("transform","translate("+margin.left+","+margin.top+")");
+
+                       const svg2 = d3.select("#map2");
+                       const width2 = svg2.attr("width");
+                       const height2 = svg2.attr("height");
+                       const margin2 = { top: 10, right: 10, bottom: 10, left: 10};
+                       const sfMapWidth2 = width2 - margin2.left - margin2.right;
+                       const sfMapHeight2 = height2 - margin2.top - margin2.bottom;
+                       const sfMap2 = svg.append("g")
+                                      .attr("transform","translate("+margin2.left+","+margin2.top+")");
+
+        const requestData = async function() {
+
+          const sfData = await d3.json("SF-Neighborhoods.geo.json");
+          //console.log(sfData);
+
+          var sfNeighborhoods = topojson.feature(sfData, sfData.objects.SFNeighborhoods);
+          var projection = d3.geoMercator().fitSize([sfMapWidth, sfMapHeight], sfNeighborhoods);
+          var path = d3.geoPath().projection(projection);
+
+          sfMap.selectAll(path.neighborhood)
+               .data(sfNeighborhoods.features)
+               .join("path")
+               .attr("class", "neighborhood")
+               .attr("d", path);
+
+        // /////////////////////////////////////////////////////
+        //// test
+        sfMap2.selectAll(path.neighborhood)
+             .data(sfNeighborhoods.features)
+             .join("path")
+             .attr("class", "neighborhood")
+             .attr("d", path);
+        //// test
+        ////////////////////////////////////////////////////////
+
+          const trees = await d3.csv("Street_Tree_List-2020-08-20_FILTERED_remove2.csv");
+          //console.log(trees);
+
+          let species = trees["qSpecies"];
+          let long = trees["Longitude"];
+          let lat = trees["Latitude"];
+          let diameter = trees["DBH"];
+
+          let speciesCounts = {}; // i want this to be speciesCounts[species] gives me the number of that species in the list
+          //let idToSpecise = {}; // idToSpecise[speciesid] gives the name .... hmmm we have more than one id per species tho
+
+          // qSpecies.forEach( row => {
+          //
+          // });
+          //
+          // trees.forEach( row => {
+            // i want to go through the species, add them to a list
+            // but first i want to check if they are already there
+            // if they are already there, don't add, move to next
+            // if they are not there, add it to the list, move to next
+            // then you have a list and you can count how many things are in the list
+            // so i need this because i need a domain for my color scale
+            // as for a minmax - who knows
+          // });
+
+          // now i want to vary the diameter of the circle with the diameter of the trees
+          // so i need a min and a max of the diameters of the trees
+          // then i need a scale
+          // thought about using area to represent but remembered that this is one of the
+          // hardest things for humans to tell the differences between
+          // after research, decided to use sqrt because it preserved more of the nautral mental model
+          // const imdbExtent = d3.extent(data, d => d['imdb_rating']);
+
+          // findng the min in excel = 0
+          // finding the max in excel = 9999
+          // removed the dbh 9999, new max is 200, followed by 125, so i dont think it's incorrect
+
+          const dbhExtent = d3.extent(trees, d => d["DBH"]);
+          console.log(dbhExtent);
+          const radScale = d3.scaleLinear()
+                             .domain(dbhExtent)
+                             .range([1,20]);
+
+          // const genreScale = d3.scaleOrdinal(d3.schemeCategory10);
+          const speciesScale = d3.scaleOrdinal(d3.schemeCategory10);
+
+          //var circleScale = d3.scale.sqrt().domain([0, 10]).range([0, 100]);
+
+
+          // console.log("hi there");
+          // trees.forEach( d =>  {
+          //   console.log(trees["Longitude"]);
+          //   console.log(trees["qSpecies"]);
+          // })
+          trees.forEach( d => {
+
+             d.Position = projection([d["Longitude"], d["Latitude"]]);
+          //   //console.log(d.Position[0]);
+          //   //console.log(d.Position[1]);
+           });
+
+          // let randLong = -122.441316575098;
+          // let randLat = 37.805822893385;
+          //
+          // let randProj = projection([randLong,randLat]);
+
+
+          sfMap.selectAll("circle")
+               .data(trees)
+               .join("circle")
+               .attr("r", d => radScale(d["DBH"]))
+               .attr("fill", d => speciesScale(d["qSpecies"]))
+               .attr("opacity", .2)
+               .attr("stroke", "white")
+               .attr("stroke-width", .5)
+               //.attr("cx", randProj[0])
+               //.attr("cy", randProj[1]);
+               // .attr("cx", function(d) { return projection([d.long,d.lat])[0] })
+               // .attr("cy", function(d) { return projection([d.long, d.lat])[1] });
+               .attr("cx", d => d.Position[0])
+               .attr("cy", d => d.Position[1]);
+
+          // trying to do just one type of tree
+          // data.filter(function(d){ return d.name == "toto" })
+
+          let juniper = trees.filter(function(d) {return d.qSpecies == "Juniperus chinensis :: Juniper"})
+
+          const dbhExtentTest = d3.extent(juniper, d => d["DBH"]);
+          console.log(dbhExtentTest);
+          const radScaleTest = d3.scaleLinear()
+                                 .domain(dbhExtentTest)
+                                 .range([1,20]);
+
+          juniper.forEach( d => {
+            d.Position = projection([d["Longitude"], d["Latitude"]]);
+          });
+
+          sfMap2.selectAll("circle")
+               .data(juniper)
+               .join("circle")
+               .attr("r", d => radScaleTest(d["DBH"]))
+               .attr("fill", "white")
+               .attr("opacity", .2)
+               .attr("stroke", "white")
+               .attr("stroke-width", .5)
+               //.attr("cx", randProj[0])
+               //.attr("cy", randProj[1]);
+               // .attr("cx", function(d) { return projection([d.long,d.lat])[0] })
+               // .attr("cy", function(d) { return projection([d.long, d.lat])[1] });
+               .attr("cx", d => d.Position[0])
+               .attr("cy", d => d.Position[1]);
+
+        };
+        requestData();
+      </script>
+
+    </div>
+  </div>
+  </div>
+
+  <div class="bottom_bar">
+    <div class="inner_bottom">
+    </div>
+  </div>
+
+</div>
+  </body>
+</html>

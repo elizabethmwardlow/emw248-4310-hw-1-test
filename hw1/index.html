@@ -1,0 +1,106 @@
+<!doctype html>
+<html>
+  <head>
+    <title>INFO 4310</title>
+    <meta charset="utf-8">
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://d3js.org/topojson.v2.min.js"></script>
+  </head>
+
+  <body>
+
+    <div class="wrapper">
+        <div class="welcome">
+          <div class="inner">
+
+            <div class="hi">
+              Trees in San Francisco
+            </div>
+
+            <div class="subtitle">
+              Examining location, density, diameter, and species of the five most popular trees in SF.
+            </div>
+
+            <div class="holder">
+              <div class="three density"></div>
+              <div class="three diam"></div>
+              <div class="three species"></div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="project" id="div1">
+          <div class="project_inner">
+
+            <svg id="map" height="800" width="800"></svg>
+
+            <script>
+
+            const svg = d3.select("#map");
+            const width = svg.attr("width");
+            const height = svg.attr("height");
+            const margin = { top: 10, right: 10, bottom: 10, left: 10};
+            const sfMapWidth = width - margin.left - margin.right;
+            const sfMapHeight = height - margin.top - margin.bottom;
+            const sfMap = svg.append("g")
+                           .attr("transform","translate("+margin.left+","+margin.top+")");
+
+            const requestData = async function() {
+
+            const sfData = await d3.json("SF-Neighborhoods.geo.json");
+            //console.log(sfData);
+
+            var sfNeighborhoods = topojson.feature(sfData, sfData.objects.SFNeighborhoods);
+            var projection = d3.geoMercator().fitSize([sfMapWidth, sfMapHeight], sfNeighborhoods);
+            var path = d3.geoPath().projection(projection);
+
+            sfMap.selectAll(path.neighborhood)
+                 .data(sfNeighborhoods.features)
+                 .join("path")
+                 .attr("class", "neighborhood")
+                 .attr("d", path);
+
+            const trees = await d3.csv("Street_Tree_List-2020-08-20_FILTERED_remove2.csv");
+
+            const dbhExtent = d3.extent(trees, d => d["DBH"]);
+            console.log(dbhExtent);
+            const radScale = d3.scaleLinear()
+                               .domain(dbhExtent)
+                               .range([1,20]);
+
+            // const genreScale = d3.scaleOrdinal(d3.schemeCategory10);
+            const speciesScale = d3.scaleOrdinal(d3.schemeCategory10);
+
+            trees.forEach( d => {
+               d.Position = projection([d["Longitude"], d["Latitude"]]);
+             });
+
+             sfMap.selectAll("circle")
+                  .data(trees)
+                  .join("circle")
+                  .attr("r", d => radScale(d["DBH"]))
+                  .attr("fill", d => speciesScale(d["qSpecies"]))
+                  .attr("opacity", .2)
+                  .attr("stroke", "white")
+                  .attr("stroke-width", .5)
+                  .attr("cx", d => d.Position[0])
+                  .attr("cy", d => d.Position[1]);
+
+              };
+              requestData();
+
+            </script>
+
+          </div>
+        </div>
+
+        <div class="project" id="div2">
+          <div class="project_inner">
+          </div>
+        </div>
+
+
+      </div>
+    </body>
+</html>
