@@ -1,0 +1,653 @@
+<!doctype html>
+<html>
+  <head>
+    <title>INFO 4310</title>
+    <meta charset="utf-8">
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="https://d3js.org/topojson.v2.min.js"></script>
+  </head>
+
+  <style>
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      margin: 0;
+      background-color: #fff;
+      font-family: 'Roboto', sans-serif;
+    }
+
+    .inner {
+      width: 100%;
+      max-width: 70.5rem;
+      margin: 0 auto;
+      height: inherit;
+    }
+
+    .hi {
+      font-weight: bold;
+      font-size: 4.5rem;
+      line-height: 4.4375rem;
+      padding-top: 2rem;
+    }
+
+    .subtitle {
+      font-weight: 500;
+      font-size: 3rem;
+      padding-top: 1.5rem;
+      padding-bottom: 2rem;
+    }
+
+    .wrapper {
+      width: 100%;
+      max-width: 70.5rem;
+      margin: 0 auto;
+      background-color: #fff;
+      min-height: 10rem;
+      box-sizing: border-box;
+    }
+
+    .neighborhood {
+      fill: #eeeeee;
+      stroke: white;
+      stroke-width: 2px;
+    }
+
+    .project_inner {
+      display: flex;
+      width: 100%;
+      max-width: 70.5rem;
+      height: auto;
+      justify-content: space-around;
+      align-items: center;
+      padding-bottom:3rem;
+      background-color:white;
+    }
+
+    .project {
+      padding-bottom: 1rem;
+    }
+
+    .bottom_bar{
+      margin-top: 2rem;
+      padding-top: 2rem;
+    }
+
+    .inner_bottom {
+      width: 100%;
+      max-width: 70.5rem;
+      margin: 0 auto;
+      min-height: 10rem;
+    }
+
+    .holder {
+      display: flex;
+      width: 100%;
+      max-width: 70.5rem;
+      height: auto;
+      justify-content: space-around;
+      padding-top: 1rem;
+      vertical-align: top;
+    }
+
+    .three {
+      width: 33%;
+      max-width: 23.5rem;
+      min-height: 2rem;
+    }
+
+    .density .diam {
+      padding-right: 1.5rem;
+    }
+
+    #density {
+      padding-right: 1.5rem;
+    }
+
+    #diam {
+      padding-right: 1.5rem;
+      padding-left: 1.5rem;
+    }
+
+    #species {
+      padding-left: 1.5rem;
+    }
+
+    .species .diam {
+      padding-left: 1.5rem;
+    }
+
+    span {
+      font-weight: bold;
+      font-size: 1.5rem;
+      padding-top: .5rem;
+    }
+
+    p {
+      font-size: 1.15rem;
+    }
+
+    .tree {
+      font-weight: bold;
+      font-size: 2.5rem;
+      padding-top:1rem;
+    }
+
+    .narrate {
+      font-weight: 500;
+      font-size: 1.75rem;
+      padding-top: 1rem;
+    }
+
+
+    </style>
+
+  <body>
+
+    <div class="wrapper">
+        <div class="welcome">
+          <div class="inner">
+
+            <div class="hi">
+              Trees in San Francisco
+            </div>
+
+            <div class="subtitle">
+              Examining location, density, diameter, and species of the five most popular trees in SF.
+            </div>
+
+            <div class="holder">
+              <div class="three density" id="density">
+                <span>Density: </span><p>Examines how densely populated trees are in the city of San Francisco.
+                By looking at the way trees cluster, we observe planting patterns and can inquire further.</p>
+              </div>
+              <div class="three diam" id="diam">
+                <span>Diameter:</span><p>Helps us visualize the real life size of a tree. Diameter of the tree
+                  is measured at breast height. Minimum recorded diameter is 0, and the maximum in this modified
+                  dataset is 106 ft.</p>
+              </div>
+              <div class="three species" id="species">
+                <span>Species:</span><p>Indicates trends within San Francisco, especially when coupled with
+                data on density. There are 408 different species represented in the city, and we will take a
+                closer look at the most popular 5.</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="tree">All Tree Species</div>
+        <div class="narrate">Visualized here is the data of all the tree species in San Francisco.
+          No obvious patterns emerge here, as there is decent spread of density and species throughout
+          the city.</div>
+        <!--ALL TREES ON ONE MAP-->
+        <div class="project" id="div1">
+          <div class="project_inner">
+
+
+            <svg id="map" height="800" width="800"></svg>
+
+            <script>
+
+            const svg = d3.select("#map");
+            const width = svg.attr("width");
+            const height = svg.attr("height");
+            const margin = { top: 10, right: 10, bottom: 10, left: 10};
+            const sfMapWidth = width - margin.left - margin.right;
+            const sfMapHeight = height - margin.top - margin.bottom;
+            const sfMap = svg.append("g")
+                           .attr("transform","translate("+margin.left+","+margin.top+")");
+
+            const requestData = async function() {
+
+            const sfData = await d3.json("SF-Neighborhoods.geo.json");
+            //console.log(sfData);
+
+            var sfNeighborhoods = topojson.feature(sfData, sfData.objects.SFNeighborhoods);
+            var projection = d3.geoMercator().fitSize([sfMapWidth, sfMapHeight], sfNeighborhoods);
+            var path = d3.geoPath().projection(projection);
+
+            sfMap.selectAll(path.neighborhood)
+                 .data(sfNeighborhoods.features)
+                 .join("path")
+                 .attr("class", "neighborhood")
+                 .attr("d", path);
+
+            const trees = await d3.csv("Street_Tree_List-2020-08-20_FILTERED_remove2.csv");
+
+            const dbhExtent = d3.extent(trees, d => d["DBH"]);
+            console.log(dbhExtent);
+            const radScale = d3.scaleLinear()
+                               .domain(dbhExtent)
+                               .range([1,20]);
+
+            // const genreScale = d3.scaleOrdinal(d3.schemeCategory10);
+            const speciesScale = d3.scaleOrdinal(d3.schemeCategory10);
+
+            trees.forEach( d => {
+               d.Position = projection([d["Longitude"], d["Latitude"]]);
+             });
+
+             sfMap.selectAll("circle")
+                  .data(trees)
+                  .join("circle")
+                  .attr("r", d => radScale(d["DBH"]))
+                  .attr("fill", d => speciesScale(d["qSpecies"]))
+                  .attr("opacity", .2)
+                  .attr("stroke", "white")
+                  .attr("stroke-width", .5)
+                  .attr("cx", d => d.Position[0])
+                  .attr("cy", d => d.Position[1]);
+
+              // console.log(speciesScale.domain());
+              // genreScale.domain().forEach(function(d,i) {
+              //   d3.select("#scatterLegend")
+              //   .append("span")
+              //   .text(d)
+              //   .style("color",genreScale(d))
+              // });
+              // speciesScale.domain().forEach(function(d,i) {
+              //   d3.select("#scatterLegend")
+              //   .append("span")
+              //   .text(d)
+              //   .style("color", speciesScale(d));
+              // });
+
+              };
+
+
+              requestData();
+
+            </script>
+
+          </div>
+        </div>
+        <div id="scatterLegend"></div>
+
+        <div class="tree">Most Common Tree: Sycamore London Plane</div>
+        <div class="narrate">The map represents the Sycamore London Plane trees in San Francisco.
+        The data points consistently align along neighborhood borders as well as in straight lines,
+        indicating the possibility of this tree being found along streets.</div>
+        <!--SYCAMORE LONDON PLANE #1-->
+        <div class="project" id="div2">
+          <div class="project_inner">
+
+            <svg id="map2" height="800" width="800"></svg>
+
+            <script>
+
+            const svg2 = d3.select("#map2");
+            const width2 = svg2.attr("width");
+            const height2 = svg2.attr("height");
+            const margin2 = { top: 10, right: 10, bottom: 10, left: 10};
+            const sfMapWidth2 = width2 - margin2.left - margin2.right;
+            const sfMapHeight2 = height2 - margin2.top - margin2.bottom;
+            const sfMap2 = svg2.append("g")
+                           .attr("transform","translate("+margin.left+","+margin.top+")");
+
+            const requestData2 = async function() {
+
+            const sfData = await d3.json("SF-Neighborhoods.geo.json");
+            //console.log(sfData);
+
+            var sfNeighborhoods = topojson.feature(sfData, sfData.objects.SFNeighborhoods);
+            var projection = d3.geoMercator().fitSize([sfMapWidth, sfMapHeight], sfNeighborhoods);
+            var path = d3.geoPath().projection(projection);
+
+            sfMap2.selectAll(path.neighborhood)
+                 .data(sfNeighborhoods.features)
+                 .join("path")
+                 .attr("class", "neighborhood")
+                 .attr("d", path);
+
+            const trees = await d3.csv("Street_Tree_List-2020-08-20_FILTERED_remove2.csv");
+            let sycamore = trees.filter(function(d) {return d.qSpecies == "Platanus x hispanica :: Sycamore: London Plane"})
+
+            const dbhExtent = d3.extent(sycamore, d => d["DBH"]);
+            console.log(dbhExtent);
+            const radScale = d3.scaleLinear()
+                               .domain(dbhExtent)
+                               .range([1,20]);
+
+            // const genreScale = d3.scaleOrdinal(d3.schemeCategory10);
+            //const speciesScale = d3.scaleOrdinal(d3.schemeCategory10);
+
+            sycamore.forEach( d => {
+               d.Position = projection([d["Longitude"], d["Latitude"]]);
+             });
+
+             sfMap2.selectAll("circle")
+                  .data(sycamore)
+                  .join("circle")
+                  .attr("r", d => radScale(d["DBH"]))
+                  .attr("fill", "#1776b6")
+                  .attr("opacity", .2)
+                  .attr("stroke", "white")
+                  .attr("stroke-width", .5)
+                  .attr("cx", d => d.Position[0])
+                  .attr("cy", d => d.Position[1]);
+
+              };
+              requestData2();
+
+            </script>
+
+          </div>
+        </div>
+
+        <div class="tree">2. New Zealand Christmas Tree</div>
+        <div class="narrate">Let's see how this goes. I hope that it looks good so I can keep it here with minimal
+        other design edits besides some font and text size changes. Hopefully I also only need a sentence or two.</div>
+        <!--NEW ZEALAND XMAS #2-->
+        <div class="project" id="div3">
+          <div class="project_inner">
+
+            <svg id="map3" height="800" width="800"></svg>
+
+            <script>
+
+            // naming variables for the chart
+            const svg3 = d3.select("#map3");
+            const width3 = svg3.attr("width");
+            const height3 = svg3.attr("height");
+            const margin3 = { top: 10, right: 10, bottom: 10, left: 10};
+            const sfMapWidth3 = width3 - margin3.left - margin3.right;
+            const sfMapHeight3 = height3 - margin2.top - margin3.bottom;
+            const sfMap3 = svg3.append("g")
+                           .attr("transform","translate("+margin.left+","+margin.top+")");
+
+            const requestData3 = async function() {
+
+            // load the geo data
+            const sfData = await d3.json("SF-Neighborhoods.geo.json");
+            //console.log(sfData);
+
+            // generate a projection of the SF neighborhoods
+            var sfNeighborhoods = topojson.feature(sfData, sfData.objects.SFNeighborhoods);
+            var projection = d3.geoMercator().fitSize([sfMapWidth, sfMapHeight], sfNeighborhoods);
+            var path = d3.geoPath().projection(projection);
+
+            // draw the neighborhoods with projection + path
+            sfMap3.selectAll(path.neighborhood)
+                 .data(sfNeighborhoods.features)
+                 .join("path")
+                 .attr("class", "neighborhood")
+                 .attr("d", path);
+
+            // load tree data
+            // filter it to just NZ xmas trees, second most in SF
+            const trees = await d3.csv("Street_Tree_List-2020-08-20_FILTERED_remove2.csv");
+            let xmas = trees.filter(function(d) {return d.qSpecies == "Metrosideros excelsa :: New Zealand Xmas Tree"})
+
+            // build scale for the diameter at breast height -> radius of circle
+            const dbhExtent = d3.extent(xmas, d => d["DBH"]);
+            console.log(dbhExtent);
+            const radScale = d3.scaleLinear()
+                               .domain(dbhExtent)
+                               .range([1,20]);
+
+            // prepare coordinates for projection
+            xmas.forEach( d => {
+               d.Position = projection([d["Longitude"], d["Latitude"]]);
+             });
+
+             // data join to form the circles of trees
+             sfMap3.selectAll("circle")
+                  .data(xmas)
+                  .join("circle")
+                  .attr("r", d => radScale(d["DBH"]))
+                  .attr("fill", "#ff7f00")
+                  .attr("opacity", .2)
+                  .attr("stroke", "white")
+                  .attr("stroke-width", .5)
+                  .attr("cx", d => d.Position[0])
+                  .attr("cy", d => d.Position[1]);
+
+              };
+              requestData3();
+
+            </script>
+
+          </div>
+        </div>
+
+
+        <div class="tree">3. Brisbane Box</div>
+        <div class="narrate">Let's see how this goes. I hope that it looks good so I can keep it here with minimal
+        other design edits besides some font and text size changes. Hopefully I also only need a sentence or two.</div>
+        <!--BRISANE BOX #3-->
+        <div class="project" id="div4">
+          <div class="project_inner">
+
+            <svg id="map4" height="800" width="800"></svg>
+
+            <script>
+
+            // naming variables for the chart
+            const svg4 = d3.select("#map4");
+            const width4 = svg4.attr("width");
+            const height4 = svg4.attr("height");
+            const margin4 = { top: 10, right: 10, bottom: 10, left: 10};
+            const sfMapWidth4 = width4 - margin4.left - margin4.right;
+            const sfMapHeight4 = height4 - margin4.top - margin4.bottom;
+            const sfMap4 = svg4.append("g")
+                           .attr("transform","translate("+margin.left+","+margin.top+")");
+
+            const requestData4 = async function() {
+
+            // load the geo data
+            const sfData = await d3.json("SF-Neighborhoods.geo.json");
+            //console.log(sfData);
+
+            // generate a projection of the SF neighborhoods
+            var sfNeighborhoods = topojson.feature(sfData, sfData.objects.SFNeighborhoods);
+            var projection = d3.geoMercator().fitSize([sfMapWidth, sfMapHeight], sfNeighborhoods);
+            var path = d3.geoPath().projection(projection);
+
+            // draw the neighborhoods with projection + path
+            sfMap4.selectAll(path.neighborhood)
+                 .data(sfNeighborhoods.features)
+                 .join("path")
+                 .attr("class", "neighborhood")
+                 .attr("d", path);
+
+            // load tree data
+            // filter it to just NZ xmas trees, second most in SF
+            const trees = await d3.csv("Street_Tree_List-2020-08-20_FILTERED_remove2.csv");
+            let brisbane = trees.filter(function(d) {return d.qSpecies == "Lophostemon confertus :: Brisbane Box"})
+
+            // build scale for the diameter at breast height -> radius of circle
+            const dbhExtent = d3.extent(brisbane, d => d["DBH"]);
+            console.log(dbhExtent);
+            const radScale = d3.scaleLinear()
+                               .domain(dbhExtent)
+                               .range([1,10]);
+
+            // prepare coordinates for projection
+            brisbane.forEach( d => {
+               d.Position = projection([d["Longitude"], d["Latitude"]]);
+             });
+
+             // data join to form the circles of trees
+             sfMap4.selectAll("circle")
+                  .data(brisbane)
+                  .join("circle")
+                  .attr("r", d => radScale(d["DBH"]))
+                  .attr("fill", "#7f7f7f")
+                  .attr("opacity", .2)
+                  .attr("stroke", "white")
+                  .attr("stroke-width", .5)
+                  .attr("cx", d => d.Position[0])
+                  .attr("cy", d => d.Position[1]);
+
+              };
+              requestData4();
+
+            </script>
+
+          </div>
+        </div>
+
+        <div class="tree">4. Swamp Myrtle</div>
+        <div class="narrate">Let's see how this goes. I hope that it looks good so I can keep it here with minimal
+        other design edits besides some font and text size changes. Hopefully I also only need a sentence or two.</div>
+        <!--SWAMP MYRTLE #4-->
+        <div class="project" id="div5">
+          <div class="project_inner">
+
+            <svg id="map5" height="800" width="800"></svg>
+
+            <script>
+
+            // naming variables for the chart
+            const svg5 = d3.select("#map5");
+            const width5 = svg5.attr("width");
+            const height5 = svg5.attr("height");
+            const margin5 = { top: 10, right: 10, bottom: 10, left: 10};
+            const sfMapWidth5 = width5 - margin5.left - margin5.right;
+            const sfMapHeight5 = height5 - margin5.top - margin5.bottom;
+            const sfMap5 = svg5.append("g")
+                           .attr("transform","translate("+margin.left+","+margin.top+")");
+
+            const requestData5 = async function() {
+
+            // load the geo data
+            const sfData = await d3.json("SF-Neighborhoods.geo.json");
+            //console.log(sfData);
+
+            // generate a projection of the SF neighborhoods
+            var sfNeighborhoods = topojson.feature(sfData, sfData.objects.SFNeighborhoods);
+            var projection = d3.geoMercator().fitSize([sfMapWidth, sfMapHeight], sfNeighborhoods);
+            var path = d3.geoPath().projection(projection);
+
+            // draw the neighborhoods with projection + path
+            sfMap5.selectAll(path.neighborhood)
+                 .data(sfNeighborhoods.features)
+                 .join("path")
+                 .attr("class", "neighborhood")
+                 .attr("d", path);
+
+            // load tree data
+            // filter it to just NZ xmas trees, second most in SF
+            const trees = await d3.csv("Street_Tree_List-2020-08-20_FILTERED_remove2.csv");
+            let swamp = trees.filter(function(d) {return d.qSpecies == "Tristaniopsis laurina :: Swamp Myrtle"})
+
+            // build scale for the diameter at breast height -> radius of circle
+            const dbhExtent = d3.extent(swamp, d => d["DBH"]);
+            console.log(dbhExtent);
+            const radScale = d3.scaleLinear()
+                               .domain(dbhExtent)
+                               .range([1,10]);
+
+            // prepare coordinates for projection
+            swamp.forEach( d => {
+               d.Position = projection([d["Longitude"], d["Latitude"]]);
+             });
+
+             // data join to form the circles of trees
+             sfMap5.selectAll("circle")
+                  .data(swamp)
+                  .join("circle")
+                  .attr("r", d => radScale(d["DBH"]))
+                  .attr("fill", "#bcbf00")
+                  .attr("opacity", .2)
+                  .attr("stroke", "white")
+                  .attr("stroke-width", .5)
+                  .attr("cx", d => d.Position[0])
+                  .attr("cy", d => d.Position[1]);
+
+              };
+              requestData5();
+
+            </script>
+
+          </div>
+        </div>
+
+
+        <div class="tree">5. Victorian Box</div>
+        <div class="narrate">Let's see how this goes. I hope that it looks good so I can keep it here with minimal
+        other design edits besides some font and text size changes. Hopefully I also only need a sentence or two.</div>
+        <!--VICTORIAN BOX #5-->
+        <div class="project" id="div6">
+          <div class="project_inner">
+
+            <svg id="map6" height="800" width="800"></svg>
+
+            <script>
+
+            // naming variables for the chart
+            const svg6 = d3.select("#map6");
+            const width6 = svg6.attr("width");
+            const height6 = svg5.attr("height");
+            const margin6 = { top: 10, right: 10, bottom: 10, left: 10};
+            const sfMapWidth6 = width6 - margin6.left - margin6.right;
+            const sfMapHeight6 = height6 - margin6.top - margin6.bottom;
+            const sfMap6 = svg6.append("g")
+                           .attr("transform","translate("+margin.left+","+margin.top+")");
+
+            const requestData6 = async function() {
+
+            // load the geo data
+            const sfData = await d3.json("SF-Neighborhoods.geo.json");
+            //console.log(sfData);
+
+            // generate a projection of the SF neighborhoods
+            var sfNeighborhoods = topojson.feature(sfData, sfData.objects.SFNeighborhoods);
+            var projection = d3.geoMercator().fitSize([sfMapWidth, sfMapHeight], sfNeighborhoods);
+            var path = d3.geoPath().projection(projection);
+
+            // draw the neighborhoods with projection + path
+            sfMap6.selectAll(path.neighborhood)
+                 .data(sfNeighborhoods.features)
+                 .join("path")
+                 .attr("class", "neighborhood")
+                 .attr("d", path);
+
+            // load tree data
+            // filter it to just NZ xmas trees, second most in SF
+            const trees = await d3.csv("Street_Tree_List-2020-08-20_FILTERED_remove2.csv");
+            let victorian = trees.filter(function(d) {return d.qSpecies == "Pittosporum undulatum :: Victorian Box"})
+
+            // build scale for the diameter at breast height -> radius of circle
+            const dbhExtent = d3.extent(victorian, d => d["DBH"]);
+            console.log(dbhExtent);
+            const radScale = d3.scaleLinear()
+                               .domain(dbhExtent)
+                               .range([1,20]);
+
+            // prepare coordinates for projection
+            victorian.forEach( d => {
+               d.Position = projection([d["Longitude"], d["Latitude"]]);
+             });
+
+             // data join to form the circles of trees
+             sfMap6.selectAll("circle")
+                  .data(victorian)
+                  .join("circle")
+                  .attr("r", d => radScale(d["DBH"]))
+                  .attr("fill", "#e574c3")
+                  .attr("opacity", .2)
+                  .attr("stroke", "white")
+                  .attr("stroke-width", .5)
+                  .attr("cx", d => d.Position[0])
+                  .attr("cy", d => d.Position[1]);
+
+              };
+              requestData6();
+
+            </script>
+
+          </div>
+        </div>
+
+        <div class="bottom_bar">
+          <div class="inner_bottom">
+          </div>
+        </div>
+
+      </div>
+    </body>
+</html>
